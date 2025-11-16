@@ -1,0 +1,8 @@
+{
+  "name": "STAT Books",
+  "description": "An AI-powered web platform to typeset your manuscript into a high-quality, KDP-ready PDF. Features AI-driven formatting, cover design, marketing material generation, and an interactive voice assistant.",
+  "requestFramePermissions": [
+    "microphone",
+    "geolocation"
+  ]
+}
