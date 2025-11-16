@@ -58,3 +58,23 @@ export const getInitialBook = (): Book => {
     achievements: [],
   };
 };
+
+export const getInitialKidsBook = (): Book => {
+  const initialBook = getInitialBook();
+  return {
+    ...initialBook,
+    title: 'My Awesome Story',
+    author: 'A Young Author',
+    manuscriptParts: [
+      { id: self.crypto.randomUUID(), type: 'Copyright', title: 'Copyright', content: '' },
+      { id: self.crypto.randomUUID(), type: 'Chapter', title: 'The Magical Treehouse', content: 'Once upon a time, in a backyard not so far away, there was a magical treehouse...' },
+    ],
+    settings: {
+        ...initialBook.settings,
+        title: 'My Awesome Story',
+        author: 'A Young Author',
+        fontFamily: 'Montserrat',
+        fontSize: 14,
+    }
+  };
+};

@@ -112,8 +112,8 @@ export default class PdfGenerator {
           if (value) drawLine(`ISBN (${key.toUpperCase()}): ${value}`);
       });
        y-= 10;
-       drawLine(`Cover design by ${settings.author} using Typesetter AI.`);
-       drawLine(`Interior design by Typesetter AI.`);
+       drawLine(`Cover design by ${settings.author} using AuthorOS.`);
+       drawLine(`Interior design by AuthorOS.`);
     }
 
     // --- RENDER OTHER FRONT MATTER ---

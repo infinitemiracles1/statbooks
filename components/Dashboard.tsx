@@ -1,6 +1,6 @@
 
 import React, { useRef, useState, useEffect, useMemo } from 'react';
-import { Book as BookIcon, PlusCircle, Upload, Trash2, Feather, LogOut, BookOpen, Palette, BookAudio, User } from 'lucide-react';
+import { Book as BookIcon, PlusCircle, Upload, Trash2, Feather, LogOut, BookOpen, Palette, BookAudio, User, Lock, Smile, Sparkles } from 'lucide-react';
 import { Book as BookType } from '../types';
 import { GoogleGenAI } from "@google/genai";
 import { Tab } from './Editor';
@@ -14,11 +14,13 @@ interface DashboardProps {
   onDeleteBook: (bookId: string) => void;
   onLogout: () => void;
   onGoToLogin: () => void;
+  onStartGuestSession: () => void;
+  onStartKidsGuestSession: () => void;
   isImporting: boolean;
   mostRecentBook: BookType | null;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ userMode, books, onSelectBook, onCreateNewBook, onImportBook, onDeleteBook, onLogout, onGoToLogin, isImporting, mostRecentBook }) => {
+const Dashboard: React.FC<DashboardProps> = ({ userMode, books, onSelectBook, onCreateNewBook, onImportBook, onDeleteBook, onLogout, onGoToLogin, onStartGuestSession, onStartKidsGuestSession, isImporting, mostRecentBook }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [quote, setQuote] = useState('');
   const [isQuoteLoading, setIsQuoteLoading] = useState(true);
@@ -74,21 +76,37 @@ const Dashboard: React.FC<DashboardProps> = ({ userMode, books, onSelectBook, on
     </div>
   );
 
-  const FeatureWidget: React.FC<{onClick: () => void, icon: React.ReactNode, title: string, description: string, disabled?: boolean}> = ({onClick, icon, title, description, disabled}) => (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm text-left flex items-center gap-4 transition-all hover:shadow-md hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-    >
-        <div className="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 p-3 rounded-full">
+  const FeatureWidget: React.FC<{onClick: () => void, icon: React.ReactNode, title: string, description: string, locked?: boolean}> = ({onClick, icon, title, description, locked}) => {
+    const content = (
+      <>
+        <div className={`p-3 rounded-full ${locked ? 'bg-gray-200 dark:bg-gray-700 text-gray-400' : 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300'}`}>
             {icon}
         </div>
         <div>
-            <h4 className="font-bold text-gray-800 dark:text-white">{title}</h4>
+            <h4 className={`font-bold ${locked ? 'text-gray-500 dark:text-gray-400' : 'text-gray-800 dark:text-white'}`}>{title}</h4>
             <p className="text-sm text-gray-500 dark:text-gray-400">{description}</p>
         </div>
-    </button>
-  );
+      </>
+    );
+
+    return locked ? (
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm text-left flex items-center gap-4 transition-all relative overflow-hidden">
+        <div className="absolute inset-0 bg-gray-400/10 backdrop-blur-sm z-10 flex items-center justify-center">
+            <button onClick={onClick} className="bg-blue-600 text-white font-semibold py-2 px-5 rounded-full hover:bg-blue-700 transition-colors text-sm shadow-md flex items-center gap-2">
+              <Lock size={14} /> Unlock Feature
+            </button>
+        </div>
+        {content}
+      </div>
+    ) : (
+      <button
+        onClick={onClick}
+        className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm text-left flex items-center gap-4 transition-all hover:shadow-md hover:-translate-y-0.5"
+      >
+        {content}
+      </button>
+    );
+  };
 
   const isAuthor = userMode === 'author';
 
@@ -96,7 +114,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userMode, books, onSelectBook, on
     <div className="flex flex-col h-screen w-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <header className="p-6 md:p-8 bg-white dark:bg-gray-800 shadow-sm relative">
         <h1 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white">
-          {isAuthor ? 'Author Dashboard' : 'KDP Pro Typesetter AI'}
+          {isAuthor ? 'Author Dashboard' : 'AuthorOS'}
         </h1>
         <div className="mt-3 text-gray-600 dark:text-gray-400 italic flex items-start h-6">
           <Feather size={18} className="mr-3 mt-1 flex-shrink-0 text-gray-400" />
@@ -125,22 +143,23 @@ const Dashboard: React.FC<DashboardProps> = ({ userMode, books, onSelectBook, on
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <FeatureWidget 
                     icon={<BookOpen size={24} />}
-                    title={isAuthor ? "Continue Writing" : "Start Your First Book"}
-                    description={isAuthor ? (mostRecentBook ? `Jump back into "${mostRecentBook.title}"` : "Start a new book") : "Use our AI-assisted editor to write."}
+                    title={isAuthor ? "Continue Writing" : "Manage Your Books"}
+                    description={isAuthor ? (mostRecentBook ? `Jump back into "${mostRecentBook.title}"` : "Start a new book") : "Sign in to save and manage projects."}
                     onClick={isAuthor ? () => mostRecentBook ? onSelectBook(mostRecentBook.id, 'manuscript') : onCreateNewBook() : onGoToLogin}
+                    locked={!isAuthor}
                 />
                  <FeatureWidget 
                     icon={<Palette size={24} />}
                     title="Design Cover"
                     description="Create a stunning cover for your book."
-                    disabled={!isAuthor && !mostRecentBook}
+                    locked={!isAuthor}
                     onClick={isAuthor ? () => mostRecentBook && onSelectBook(mostRecentBook.id, 'cover') : onGoToLogin}
                 />
                  <FeatureWidget 
                     icon={<BookAudio size={24} />}
                     title="Create Audiobook"
                     description="Generate an AI-narrated audiobook."
-                    disabled={!isAuthor && !mostRecentBook}
+                    locked={!isAuthor}
                     onClick={isAuthor ? () => mostRecentBook && onSelectBook(mostRecentBook.id, 'publishing') : onGoToLogin}
                 />
             </div>
@@ -172,14 +191,57 @@ const Dashboard: React.FC<DashboardProps> = ({ userMode, books, onSelectBook, on
                 </button>
                 </div>
             ) : (
-                <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-                    <h3 className="text-xl font-bold text-gray-800 dark:text-white">Ready to bring your story to life?</h3>
-                    <p className="mt-2 text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
-                        Sign in to the Author Portal to start writing, save your projects, and access the full suite of AI-powered publishing tools.
-                    </p>
-                    <button onClick={onGoToLogin} className="mt-6 bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition-colors text-lg">
-                        Start Writing Now
-                    </button>
+                <div className="space-y-12">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm flex flex-col items-center justify-center">
+                            <BookIcon className="text-blue-500 mb-4" size={48} />
+                            <h3 className="text-xl font-bold text-gray-800 dark:text-white">Try the Editor</h3>
+                            <p className="mt-2 text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
+                                Experience the full-featured editor in guest mode. Your work won't be saved.
+                            </p>
+                            <button onClick={onStartGuestSession} className="mt-6 bg-gray-700 text-white font-bold py-3 px-8 rounded-lg hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 transition-colors text-lg">
+                                Launch Guest Editor
+                            </button>
+                        </div>
+                        <div className="text-center p-8 bg-blue-50 dark:bg-blue-900/50 rounded-lg shadow-sm flex flex-col items-center justify-center border border-blue-200 dark:border-blue-800">
+                            <User className="text-blue-500 mb-4" size={48} />
+                            <h3 className="text-xl font-bold text-gray-800 dark:text-white">Ready to Write?</h3>
+                            <p className="mt-2 text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
+                                Sign in to the Author Portal to save projects and access all AI publishing tools.
+                            </p>
+                            <button onClick={onGoToLogin} className="mt-6 bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition-colors text-lg">
+                                Go to Author Portal
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div className="text-center">
+                        <h3 className="text-xl font-bold text-gray-700 dark:text-gray-300">For Young Authors</h3>
+                        <div className="w-24 h-1 bg-purple-500 mx-auto mt-2 rounded-full"></div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm flex flex-col items-center justify-center">
+                            <Smile className="text-purple-500 mb-4" size={48} />
+                            <h3 className="text-xl font-bold text-gray-800 dark:text-white">Try the Kids Editor</h3>
+                            <p className="mt-2 text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
+                                A fun and simple editor for kids to write their first story.
+                            </p>
+                            <button onClick={onStartKidsGuestSession} className="mt-6 bg-purple-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-purple-600 transition-colors text-lg">
+                                Launch Kids Editor
+                            </button>
+                        </div>
+                        <div className="text-center p-8 bg-purple-50 dark:bg-purple-900/50 rounded-lg shadow-sm flex flex-col items-center justify-center border border-purple-200 dark:border-purple-800">
+                             <Sparkles className="text-purple-500 mb-4" size={48} />
+                            <h3 className="text-xl font-bold text-gray-800 dark:text-white">Ready to Save Your Story?</h3>
+                            <p className="mt-2 text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
+                                Join the Kids Author Portal to save your amazing stories and share them!
+                            </p>
+                            <button onClick={onGoToLogin} className="mt-6 bg-purple-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-purple-700 transition-colors text-lg">
+                                Go to Kids Author Portal
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

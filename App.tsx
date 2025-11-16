@@ -5,7 +5,7 @@ import Dashboard from './components/Dashboard';
 import Editor, { Tab } from './components/Editor';
 import LoginScreen from './components/LoginScreen';
 import { Book, ManuscriptPart } from './types';
-import { getInitialBook } from './utils/book';
+import { getInitialBook, getInitialKidsBook } from './utils/book';
 
 // A simple mock for parsing text from a file.
 const mockParseFile = async (file: File): Promise<string> => {
@@ -32,6 +32,7 @@ const App: React.FC = () => {
     }
   });
   const [currentBookId, setCurrentBookId] = useState<string | null>(null);
+  const [guestBook, setGuestBook] = useState<Book | null>(null);
   const [initialTab, setInitialTab] = useState<Tab>('manuscript');
   const [isImporting, setIsImporting] = useState(false);
 
@@ -45,12 +46,40 @@ const App: React.FC = () => {
     }
   }, [books, userMode]);
 
-  const handleLogin = () => setUserMode('author');
+  const handleLogin = () => {
+    setGuestBook(null); // Clear guest book on login
+    setUserMode('author');
+  }
   const handleGoToLogin = () => setUserMode('login');
   const handleLogout = () => {
       setUserMode('visitor');
       setCurrentBookId(null);
   };
+  
+  const handleStartGuestSession = () => {
+    setGuestBook(getInitialBook());
+    setInitialTab('manuscript');
+  };
+  
+  const handleStartKidsGuestSession = () => {
+    setGuestBook(getInitialKidsBook());
+    setInitialTab('manuscript');
+  };
+
+  const handleUpdateGuestBook = (updatedBook: Book | ((prevBook: Book) => Book)) => {
+    setGuestBook(prevGuestBook => {
+        if (!prevGuestBook) return null;
+        if (typeof updatedBook === 'function') {
+            return updatedBook(prevGuestBook);
+        }
+        return updatedBook;
+    });
+  };
+
+  const handleEndGuestSession = () => {
+    setGuestBook(null);
+  };
+
 
   const handleCreateNewBook = () => {
     const newBook = getInitialBook();
@@ -63,7 +92,7 @@ const App: React.FC = () => {
     setCurrentBookId(bookId);
     setInitialTab(tab);
   };
-
+  
   const handleUpdateBook = (updatedBook: Book | ((prevBook: Book) => Book)) => {
     setBooks(prev => prev.map(book => {
         if (typeof updatedBook === 'function') {
@@ -74,6 +103,14 @@ const App: React.FC = () => {
     }));
   };
   
+  const handleUpdateBookOrGuestBook = (updatedBook: Book | ((prevBook: Book) => Book)) => {
+    if (guestBook) {
+        handleUpdateGuestBook(updatedBook);
+    } else {
+        handleUpdateBook(updatedBook);
+    }
+  };
+
   const handleDeleteBook = (bookId: string) => {
     setBooks(prev => prev.filter(book => book.id !== bookId));
     if (currentBookId === bookId) {
@@ -82,7 +119,11 @@ const App: React.FC = () => {
   };
 
   const handleExitEditor = () => {
-      setCurrentBookId(null);
+      if (guestBook) {
+        handleEndGuestSession();
+      } else {
+        setCurrentBookId(null);
+      }
   };
 
   const handleImportBook = useCallback(async (file: File) => {
@@ -170,10 +211,20 @@ const App: React.FC = () => {
     return <LoginScreen onLogin={handleLogin} />;
   }
 
+  if (guestBook) {
+    return <Editor
+            isGuest={true}
+            book={guestBook}
+            onUpdateBook={handleUpdateBookOrGuestBook}
+            onExit={handleExitEditor}
+            initialTab={initialTab}
+           />;
+  }
+
   if (userMode === 'author' && currentBook) {
     return <Editor 
             book={currentBook} 
-            onUpdateBook={handleUpdateBook} 
+            onUpdateBook={handleUpdateBookOrGuestBook} 
             onExit={handleExitEditor}
             initialTab={initialTab}
            />;
@@ -188,6 +239,8 @@ const App: React.FC = () => {
             onDeleteBook={handleDeleteBook}
             onLogout={handleLogout}
             onGoToLogin={handleGoToLogin}
+            onStartGuestSession={handleStartGuestSession}
+            onStartKidsGuestSession={handleStartKidsGuestSession}
             isImporting={isImporting}
             mostRecentBook={mostRecentBook}
           />;
