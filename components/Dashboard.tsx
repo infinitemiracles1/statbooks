@@ -1,29 +1,27 @@
 
 import React, { useRef, useState, useEffect, useMemo } from 'react';
-import { Book as BookIcon, PlusCircle, Upload, Trash2, Feather, LogOut, BookOpen, Palette, BookAudio } from 'lucide-react';
+import { Book as BookIcon, PlusCircle, Upload, Trash2, Feather, LogOut, BookOpen, Palette, BookAudio, User } from 'lucide-react';
 import { Book as BookType } from '../types';
 import { GoogleGenAI } from "@google/genai";
 import { Tab } from './Editor';
 
 interface DashboardProps {
+  userMode: 'visitor' | 'author';
   books: BookType[];
   onSelectBook: (bookId: string, tab?: Tab) => void;
   onCreateNewBook: () => void;
   onImportBook: (file: File) => void;
   onDeleteBook: (bookId: string) => void;
   onLogout: () => void;
+  onGoToLogin: () => void;
   isImporting: boolean;
+  mostRecentBook: BookType | null;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ books, onSelectBook, onCreateNewBook, onImportBook, onDeleteBook, onLogout, isImporting }) => {
+const Dashboard: React.FC<DashboardProps> = ({ userMode, books, onSelectBook, onCreateNewBook, onImportBook, onDeleteBook, onLogout, onGoToLogin, isImporting, mostRecentBook }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [quote, setQuote] = useState('');
   const [isQuoteLoading, setIsQuoteLoading] = useState(true);
-
-  const mostRecentBook = useMemo(() => {
-    if (books.length === 0) return null;
-    return [...books].sort((a, b) => b.lastModified - a.lastModified)[0];
-  }, [books]);
 
   useEffect(() => {
     const fetchQuote = async () => {
@@ -92,10 +90,14 @@ const Dashboard: React.FC<DashboardProps> = ({ books, onSelectBook, onCreateNewB
     </button>
   );
 
+  const isAuthor = userMode === 'author';
+
   return (
     <div className="flex flex-col h-screen w-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <header className="p-6 md:p-8 bg-white dark:bg-gray-800 shadow-sm relative">
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white">Author Dashboard</h1>
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white">
+          {isAuthor ? 'Author Dashboard' : 'KDP Pro Typesetter AI'}
+        </h1>
         <div className="mt-3 text-gray-600 dark:text-gray-400 italic flex items-start h-6">
           <Feather size={18} className="mr-3 mt-1 flex-shrink-0 text-gray-400" />
           {isQuoteLoading ? (
@@ -104,10 +106,17 @@ const Dashboard: React.FC<DashboardProps> = ({ books, onSelectBook, onCreateNewB
             <p>"{quote}"</p>
           )}
         </div>
-        <button onClick={onLogout} className="absolute top-6 right-6 flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 dark:hover:text-white transition-colors">
+        {isAuthor ? (
+           <button onClick={onLogout} className="absolute top-6 right-6 flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 dark:hover:text-white transition-colors">
             <LogOut size={16} />
             Sign Out
-        </button>
+           </button>
+        ) : (
+           <button onClick={onGoToLogin} className="absolute top-6 right-6 flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 transition-colors bg-blue-100 dark:bg-blue-900/50 py-2 px-4 rounded-full">
+            <User size={16} />
+            Author Portal
+           </button>
+        )}
       </header>
 
       <main className="flex-grow p-4 md:p-8 overflow-y-auto space-y-8">
@@ -116,49 +125,63 @@ const Dashboard: React.FC<DashboardProps> = ({ books, onSelectBook, onCreateNewB
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <FeatureWidget 
                     icon={<BookOpen size={24} />}
-                    title="Continue Writing"
-                    description={mostRecentBook ? `Jump back into "${mostRecentBook.title}"` : "Start a new book"}
-                    onClick={() => mostRecentBook ? onSelectBook(mostRecentBook.id, 'manuscript') : onCreateNewBook()}
+                    title={isAuthor ? "Continue Writing" : "Start Your First Book"}
+                    description={isAuthor ? (mostRecentBook ? `Jump back into "${mostRecentBook.title}"` : "Start a new book") : "Use our AI-assisted editor to write."}
+                    onClick={isAuthor ? () => mostRecentBook ? onSelectBook(mostRecentBook.id, 'manuscript') : onCreateNewBook() : onGoToLogin}
                 />
                  <FeatureWidget 
                     icon={<Palette size={24} />}
                     title="Design Cover"
-                    description="Create a cover for your latest book"
-                    disabled={!mostRecentBook}
-                    onClick={() => mostRecentBook && onSelectBook(mostRecentBook.id, 'cover')}
+                    description="Create a stunning cover for your book."
+                    disabled={!isAuthor && !mostRecentBook}
+                    onClick={isAuthor ? () => mostRecentBook && onSelectBook(mostRecentBook.id, 'cover') : onGoToLogin}
                 />
                  <FeatureWidget 
                     icon={<BookAudio size={24} />}
                     title="Create Audiobook"
-                    description="Generate audio for your latest book"
-                    disabled={!mostRecentBook}
-                    onClick={() => mostRecentBook && onSelectBook(mostRecentBook.id, 'publishing')}
+                    description="Generate an AI-narrated audiobook."
+                    disabled={!isAuthor && !mostRecentBook}
+                    onClick={isAuthor ? () => mostRecentBook && onSelectBook(mostRecentBook.id, 'publishing') : onGoToLogin}
                 />
             </div>
         </div>
 
         <div>
-            <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">My Bookshelf</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {books.map(book => (
-                <BookCard key={book.id} book={book} />
-            ))}
-            <button
-                onClick={onCreateNewBook}
-                className="w-full flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-gray-500 dark:text-gray-400 transition-colors hover:border-blue-500 hover:text-blue-500"
-            >
-                <PlusCircle size={32} />
-                <span className="font-semibold mt-2">New Book</span>
-            </button>
-             <button
-                onClick={handleFileImportClick}
-                disabled={isImporting}
-                className="w-full flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-gray-500 dark:text-gray-400 transition-colors hover:border-green-500 hover:text-green-500 disabled:opacity-50"
-            >
-                {isImporting ? ( <svg className="animate-spin h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ) : <Upload size={32} />}
-                <span className="font-semibold mt-2">{isImporting ? 'Importing...' : 'Import Book'}</span>
-            </button>
-            </div>
+            <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">
+              {isAuthor ? "My Bookshelf" : "Begin Your Journey"}
+            </h2>
+            {isAuthor ? (
+               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                {books.map(book => (
+                    <BookCard key={book.id} book={book} />
+                ))}
+                <button
+                    onClick={onCreateNewBook}
+                    className="w-full flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-gray-500 dark:text-gray-400 transition-colors hover:border-blue-500 hover:text-blue-500"
+                >
+                    <PlusCircle size={32} />
+                    <span className="font-semibold mt-2">New Book</span>
+                </button>
+                 <button
+                    onClick={handleFileImportClick}
+                    disabled={isImporting}
+                    className="w-full flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-gray-500 dark:text-gray-400 transition-colors hover:border-green-500 hover:text-green-500 disabled:opacity-50"
+                >
+                    {isImporting ? ( <svg className="animate-spin h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ) : <Upload size={32} />}
+                    <span className="font-semibold mt-2">{isImporting ? 'Importing...' : 'Import Book'}</span>
+                </button>
+                </div>
+            ) : (
+                <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-white">Ready to bring your story to life?</h3>
+                    <p className="mt-2 text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
+                        Sign in to the Author Portal to start writing, save your projects, and access the full suite of AI-powered publishing tools.
+                    </p>
+                    <button onClick={onGoToLogin} className="mt-6 bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition-colors text-lg">
+                        Start Writing Now
+                    </button>
+                </div>
+            )}
         </div>
       </main>
       <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".txt,.pdf,.docx"/>

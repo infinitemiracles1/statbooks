@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
 import Dashboard from './components/Dashboard';
 import Editor, { Tab } from './components/Editor';
@@ -18,8 +18,10 @@ const mockParseFile = async (file: File): Promise<string> => {
   });
 };
 
+type UserMode = 'visitor' | 'login' | 'author';
+
 const App: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userMode, setUserMode] = useState<UserMode>('visitor');
   const [books, setBooks] = useState<Book[]>(() => {
     try {
       const savedBooks = localStorage.getItem('kdp_pro_books');
@@ -34,16 +36,19 @@ const App: React.FC = () => {
   const [isImporting, setIsImporting] = useState(false);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('kdp_pro_books', JSON.stringify(books));
-    } catch (error) {
-      console.error("Could not save books to local storage", error);
+    if (userMode === 'author') {
+        try {
+          localStorage.setItem('kdp_pro_books', JSON.stringify(books));
+        } catch (error) {
+          console.error("Could not save books to local storage", error);
+        }
     }
-  }, [books]);
+  }, [books, userMode]);
 
-  const handleLogin = () => setIsAuthenticated(true);
+  const handleLogin = () => setUserMode('author');
+  const handleGoToLogin = () => setUserMode('login');
   const handleLogout = () => {
-      setIsAuthenticated(false);
+      setUserMode('visitor');
       setCurrentBookId(null);
   };
 
@@ -153,14 +158,19 @@ const App: React.FC = () => {
       setIsImporting(false);
     }
   }, []);
+  
+  const mostRecentBook = useMemo(() => {
+    if (books.length === 0) return null;
+    return [...books].sort((a, b) => b.lastModified - a.lastModified)[0];
+  }, [books]);
 
   const currentBook = books.find(book => book.id === currentBookId);
 
-  if (!isAuthenticated) {
+  if (userMode === 'login') {
     return <LoginScreen onLogin={handleLogin} />;
   }
 
-  if (currentBook) {
+  if (userMode === 'author' && currentBook) {
     return <Editor 
             book={currentBook} 
             onUpdateBook={handleUpdateBook} 
@@ -170,13 +180,16 @@ const App: React.FC = () => {
   }
 
   return <Dashboard 
+            userMode={userMode}
             books={books} 
             onSelectBook={handleSelectBook} 
             onCreateNewBook={handleCreateNewBook}
             onImportBook={handleImportBook}
             onDeleteBook={handleDeleteBook}
             onLogout={handleLogout}
+            onGoToLogin={handleGoToLogin}
             isImporting={isImporting}
+            mostRecentBook={mostRecentBook}
           />;
 };
 
