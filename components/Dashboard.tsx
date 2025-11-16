@@ -1,6 +1,6 @@
 
 import React, { useRef, useState, useEffect, useMemo } from 'react';
-import { Book as BookIcon, PlusCircle, Upload, Trash2, Feather, LogOut, BookOpen, Palette, BookAudio, User, Lock, Smile, Sparkles } from 'lucide-react';
+import { Book as BookIcon, PlusCircle, Upload, Trash2, Feather, LogOut, BookOpen, Palette, BookAudio, User, Lock, Smile, Sparkles, AlertTriangle } from 'lucide-react';
 import { Book as BookType } from '../types';
 import { GoogleGenAI } from "@google/genai";
 import { Tab } from './Editor';
@@ -24,10 +24,18 @@ const Dashboard: React.FC<DashboardProps> = ({ userMode, books, onSelectBook, on
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [quote, setQuote] = useState('');
   const [isQuoteLoading, setIsQuoteLoading] = useState(true);
+  const [apiKeyMissing, setApiKeyMissing] = useState(false);
 
   useEffect(() => {
     const fetchQuote = async () => {
       setIsQuoteLoading(true);
+      if (!process.env.API_KEY) {
+        setQuote("Add your API Key in Vercel to enable AI features.");
+        setIsQuoteLoading(false);
+        setApiKeyMissing(true);
+        return;
+      }
+      setApiKeyMissing(false);
       try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
         const response = await ai.models.generateContent({
@@ -116,12 +124,12 @@ const Dashboard: React.FC<DashboardProps> = ({ userMode, books, onSelectBook, on
         <h1 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white">
           {isAuthor ? 'Author Dashboard' : 'AuthorOS'}
         </h1>
-        <div className="mt-3 text-gray-600 dark:text-gray-400 italic flex items-start h-6">
-          <Feather size={18} className="mr-3 mt-1 flex-shrink-0 text-gray-400" />
+        <div className={`mt-3 italic flex items-start h-6 ${apiKeyMissing ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-600 dark:text-gray-400'}`}>
+          {apiKeyMissing ? <AlertTriangle size={18} className="mr-3 mt-1 flex-shrink-0" /> : <Feather size={18} className="mr-3 mt-1 flex-shrink-0 text-gray-400" />}
           {isQuoteLoading ? (
             <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 animate-pulse"></div>
           ) : (
-            <p>"{quote}"</p>
+            <p>{apiKeyMissing ? <strong>{quote}</strong> : `"${quote}"`}</p>
           )}
         </div>
         {isAuthor ? (

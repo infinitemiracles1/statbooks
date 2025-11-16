@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
 import Dashboard from './components/Dashboard';
@@ -131,6 +132,11 @@ const App: React.FC = () => {
 
     if (fileExtension === 'pdf' || fileExtension === 'docx') {
       alert(`Sorry, importing .${fileExtension} files is not yet supported. Please use a plain text (.txt) file for now.`);
+      return;
+    }
+
+    if (!process.env.API_KEY) {
+      alert("API Key is not configured. Please set up your environment variables to use the AI import feature.");
       return;
     }
     
